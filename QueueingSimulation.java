@@ -22,7 +22,7 @@ public class QueueingSimulation { //以�
         double   timePacketProduct = 0.0;
         int      numPacketsServed = 0;
         double   totalSystemTime = 0.0;
-        Packet   currPacket;
+        Packet   currPacket = null;
         int ENDTIME = 10000;
 //產生下一個packet到達的時間
 
@@ -33,9 +33,11 @@ public class QueueingSimulation { //以�
             prevTime = currTime;
             currTime = e.eventTime;
             if (e.type == 0) {  // 處理packet arrival
+
                 timePacketProduct += numPacketsInSystem* (currTime-prevTime);
                 Packet p = new Packet(currTime,exptime(b));
                 numPacketsInSystem++;
+
                 if (cpuBusy == false) { // CPU可以處理packet
                     cpuBusy = true;
                     currPacket = p;
@@ -44,16 +46,18 @@ public class QueueingSimulation { //以�
                     event_queue.add(e2);
                 }
                 else{
+                    packet_queue.add(p);
                 }  //將p 插入到packet queue的尾巴;
                 //產生下個packet的到達時間
                 Event e3 = new Event(currTime + exptime (a),0);
                 //將e3 依照它的eventTime插入到event queue中適當位置;
+                event_queue.add(e3);
             }
             else { // 處理packet departure
-                timePacketProduct += numPacketsInSystem*(currTime–prevTime);
+                timePacketProduct += numPacketsInSystem*(currTime-prevTime);
                 numPacketsInSystem--;
                 numPacketsServed++;
-                totalSystemTime +=  (currTime–currPacket.arrTime);
+                totalSystemTime+=currTime-currPacket.arrTime;
 
                 if (packet_queue.size()==0){
                     cpuBusy = false;
@@ -65,8 +69,8 @@ public class QueueingSimulation { //以�
                 }
             }
         }
-        印出 N = timePacketProduct / ENDTIME;
-        印出 T = totalSystemTime/ numPacketsServed;
+        //印出 N = timePacketProduct / ENDTIME;
+        //印出 T = totalSystemTime/ numPacketsServed;
     }
     public static double exptime(double lambda){
         return  -1.0 *  Math.log((random_number()) / lambda);

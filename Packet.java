@@ -3,7 +3,7 @@
 
 
 public  class Packet {
-    double arrTime, svcTime;
+     private double arrTime, svcTime;
 
     public double getArrTime() {
         return arrTime;

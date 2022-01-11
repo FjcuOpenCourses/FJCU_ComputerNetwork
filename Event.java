@@ -1,6 +1,6 @@
 public class Event {
-    double eventTime;
-    int	type; // 0 = packet arrival, 1 = packet departure
+    private double eventTime;
+    private int	type; // 0 = packet arrival, 1 = packet departure
 
     public double getEventTime() {
         return eventTime;

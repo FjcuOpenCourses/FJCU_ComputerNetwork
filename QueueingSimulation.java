@@ -39,6 +39,8 @@ public class QueueingSimulation {
     public void startTest(){
         for (Double lambda:this.lambda){
             simulate(lambda, micro);
+            this.event_queue.clear();
+            this.packet_queue.clear();
         }
     }
 
@@ -95,18 +97,22 @@ public class QueueingSimulation {
                         cpuBusy = false;
                     }
                     else{ // CPU處理下一個packet
+
                         currPacket =this.packet_queue.remove(0);
-                        Event e4 = new Event(currTime + currPacket.svcTime,1);
+                        if(currPacket==null){
+                            System.out.println("check");
+                        }
+                        Event e4 = new Event(currTime + currPacket.getSvcTime(),1);
                         //將e4 依照它的eventTime插入到event queue中適當位置;
                         this.event_queue.add(e4);
                         Collections.sort(this.event_queue, (o1, o2) -> (int) (o1.getEventTime()-o2.getEventTime()));
+
                     }
                 }
-//                System.out.println(currTime);
-
             }catch (NullPointerException e){
-                System.out.println("currentTime"+currTime);
+                System.out.println("ERROR at currentTime:"+currTime);
                 System.out.println("compare:"+Double.compare(currTime,ENDTIME));
+                e.fillInStackTrace();
             }
         }
 
@@ -118,6 +124,7 @@ public class QueueingSimulation {
         System.out.println(totalSystemTime/ numPacketsServed);
         this.Nlist.add(timePacketProduct / ENDTIME);
         this.Tlist.add(totalSystemTime/ numPacketsServed);
+
     }
     public void show(String plotTitle,double[] x,double[] y) throws IOException, PythonExecutionException {
 

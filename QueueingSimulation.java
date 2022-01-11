@@ -1,20 +1,48 @@
+import com.github.sh0nk.matplotlib4j.Plot;
+import com.github.sh0nk.matplotlib4j.PythonExecutionException;
+import org.math.plot.Plot2DPanel;
+
+import javax.swing.*;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Random;
+import java.util.stream.Stream;
+import org.apache.commons.lang3.ArrayUtils;
+public class QueueingSimulation {
 
-public class QueueingSimulation { //以為例
+    private ArrayList<Double> Nlist;
+    private ArrayList<Double> Tlist;
+    private   List<Event> event_queue ;
+    private   List<Packet> packet_queue ;
+    private   List<Double> lambda;
+    private   Double micro;
+    private Plot plt ;
 
-    public static List<Event> event_queue = new ArrayList<>();
-    public static List<Packet> packet_queue = new ArrayList<>();
 
-    public static void main(String[] args) {
-        simulate(0.05, 10);
-        for (int i=0; i<5; i++) {
-            double a = 1.0 +  i*2.0;
-            double b= 10;
-            simulate(a,b);
+
+    public List<Event> getEvent_queue() {
+        return event_queue;
+    }
+
+
+    public QueueingSimulation(List<Double>lambda, Double micro){
+        this.lambda = lambda;
+        this.micro = micro;
+        this.event_queue = new ArrayList<Event>();
+        this.packet_queue = new ArrayList<Packet>();
+        this.plt = Plot.create();
+        this.Nlist = new ArrayList<>();
+        this.Tlist = new ArrayList<>();
+    }
+    public void startTest(){
+        for (Double lambda:this.lambda){
+            simulate(lambda, micro);
         }
     }
-    public static void simulate(double a, double b) {
+
+    public void simulate(double a, double b) {
         double   currTime=0.0;
         double   prevTime = 0.0;
         boolean  cpuBusy = false;
@@ -23,56 +51,102 @@ public class QueueingSimulation { //以�
         int      numPacketsServed = 0;
         double   totalSystemTime = 0.0;
         Packet   currPacket = null;
-        int ENDTIME = 10000;
-//產生下一個packet到達的時間
+        double ENDTIME = 10000.0;
+        //產生下一個packet到達的時間
 
-        event_queue.add(new Event(exptime(a),0));
+        this.event_queue.add(new Event(exptime(a),0));
 
-        while (currTime < ENDTIME) { // 這裡ENDTIME設為10000
-            Event e =  event_queue.get(0);//從event queue取出first event;
-            prevTime = currTime;
-            currTime = e.eventTime;
-            if (e.type == 0) {  // 處理packet arrival
+        while (Double.compare(currTime, ENDTIME)<0) { // 這裡ENDTIME設為10000
+            try{
+                Event e =  this.event_queue.remove(0);//從event queue取出first event;
+                prevTime = currTime;
+                currTime = e.getEventTime();
 
-                timePacketProduct += numPacketsInSystem* (currTime-prevTime);
-                Packet p = new Packet(currTime,exptime(b));
-                numPacketsInSystem++;
+                if (e.getType() == 0) {  // 處理packet arrival
+                    timePacketProduct += numPacketsInSystem* (currTime-prevTime);
+                    Packet p = new Packet(currTime,exptime(b));
+                    numPacketsInSystem++;
 
-                if (cpuBusy == false) { // CPU可以處理packet
-                    cpuBusy = true;
-                    currPacket = p;
-                    Event e2 = new Event(currTime + p.svcTime,1);
-                    //將e2 依照它的eventTime插入到event queue中適當位置;
-                    event_queue.add(e2);
+                    if (cpuBusy == false) { // CPU可以處理packet
+                        cpuBusy = true;
+                        currPacket = p;
+                        Event e2 = new Event(currTime + p.getSvcTime(),1);
+                        //將e2 依照它的eventTime插入到event queue中適當位置;
+                        this.event_queue.add(e2);
+                        Collections.sort(this.event_queue, (o1, o2) -> (int) (o1.getEventTime()-o2.getEventTime()));
+                    }
+                    else{
+                        this.packet_queue.add(p);
+                    }  //將p 插入到packet queue的尾巴;
+                    //產生下個packet的到達時間
+                    Event e3 = new Event(currTime + exptime (a),0);
+                    //將e3 依照它的eventTime插入到event queue中適當位置;
+                    this.event_queue.add(e3);
+                    Collections.sort(this.event_queue, (o1, o2) -> (int) (o1.getEventTime()-o2.getEventTime()));
                 }
-                else{
-                    packet_queue.add(p);
-                }  //將p 插入到packet queue的尾巴;
-                //產生下個packet的到達時間
-                Event e3 = new Event(currTime + exptime (a),0);
-                //將e3 依照它的eventTime插入到event queue中適當位置;
-                event_queue.add(e3);
-            }
-            else { // 處理packet departure
-                timePacketProduct += numPacketsInSystem*(currTime-prevTime);
-                numPacketsInSystem--;
-                numPacketsServed++;
-                totalSystemTime+=currTime-currPacket.arrTime;
+                else {
+                    // 處理packet departure
+                    timePacketProduct += numPacketsInSystem*(currTime-prevTime);
+                    numPacketsInSystem--;
+                    numPacketsServed++;
+                    totalSystemTime+=currTime-currPacket.getArrTime();
 
-                if (packet_queue.size()==0){
-                    cpuBusy = false;
+                    if (this.packet_queue.size()<=0){
+                        cpuBusy = false;
+                    }
+                    else{ // CPU處理下一個packet
+                        currPacket =this.packet_queue.remove(0);
+                        Event e4 = new Event(currTime + currPacket.svcTime,1);
+                        //將e4 依照它的eventTime插入到event queue中適當位置;
+                        this.event_queue.add(e4);
+                        Collections.sort(this.event_queue, (o1, o2) -> (int) (o1.getEventTime()-o2.getEventTime()));
+                    }
                 }
-                else{ // CPU處理下一個packet
-                    currPacket =packet_queue.get(0);
-                    Event e4 = new Event(currTime + currPacket.svcTime,1);
-                    //將e4 依照它的eventTime插入到event queue中適當位置;
-                }
+//                System.out.println(currTime);
+
+            }catch (NullPointerException e){
+                System.out.println("currentTime"+currTime);
+                System.out.println("compare:"+Double.compare(currTime,ENDTIME));
             }
         }
-        //印出 N = timePacketProduct / ENDTIME;
-        //印出 T = totalSystemTime/ numPacketsServed;
+
+
+//        印出 N = timePacketProduct / ENDTIME;
+//        印出 T = totalSystemTime/ numPacketsServed;
+        System.out.println("result");
+        System.out.println(timePacketProduct / ENDTIME);
+        System.out.println(totalSystemTime/ numPacketsServed);
+        this.Nlist.add(timePacketProduct / ENDTIME);
+        this.Tlist.add(totalSystemTime/ numPacketsServed);
     }
-    public static double exptime(double lambda){
-        return  -1.0 *  Math.log((random_number()) / lambda);
+    public void show(String plotTitle,double[] x,double[] y) throws IOException, PythonExecutionException {
+
+
+        // create your PlotPanel (you can use it as a JPanel)
+        Plot2DPanel plot = new Plot2DPanel();
+
+        // add a line plot to the PlotPanel
+        plot.addLinePlot(plotTitle, x, y);
+
+        // put the PlotPanel in a JFrame, as a JPanel
+        JFrame frame = new JFrame("a plot panel");
+        frame.setContentPane(plot);
+        frame.setVisible(true);
     }
+    public static double exptime(double lambda) {
+        Random random = new Random();
+        double randomNumber = random.nextDouble();
+        return  -1.0 *  Math.log(randomNumber) / lambda;
+    }
+    public void showNplot() throws IOException, PythonExecutionException {
+        double[] x = ArrayUtils.toPrimitive(this.lambda.stream().toArray(Double[]::new));
+        double[] y =   ArrayUtils.toPrimitive(this.Nlist.stream().toArray(Double[]::new));
+        this.show("test",x,y);
+    }
+    public void showTplot() throws IOException, PythonExecutionException {
+        double[] x = ArrayUtils.toPrimitive(this.lambda.stream().toArray(Double[]::new));
+        double[] y =   ArrayUtils.toPrimitive(this.Tlist.stream().toArray(Double[]::new));
+        this.show("test",x,y);
+    }
+
 }

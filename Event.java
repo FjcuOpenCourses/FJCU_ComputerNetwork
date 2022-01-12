@@ -6,16 +6,8 @@ public class Event {
         return eventTime;
     }
 
-    public void setEventTime(double eventTime) {
-        this.eventTime = eventTime;
-    }
-
     public int getType() {
         return type;
-    }
-
-    public void setType(int type) {
-        this.type = type;
     }
 
     public Event(double eventTime, int type){

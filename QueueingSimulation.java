@@ -1,5 +1,6 @@
 import com.github.sh0nk.matplotlib4j.Plot;
 import com.github.sh0nk.matplotlib4j.PythonExecutionException;
+import org.apache.commons.lang3.ArrayUtils;
 import org.math.plot.Plot2DPanel;
 
 import javax.swing.*;
@@ -8,34 +9,40 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
-import java.util.stream.Stream;
-import org.apache.commons.lang3.ArrayUtils;
+
 public class QueueingSimulation {
 
     private ArrayList<Double> Nlist;
+
+
+
     private ArrayList<Double> Tlist;
     private   List<Event> event_queue ;
     private   List<Packet> packet_queue ;
     private   List<Double> lambda;
     private   Double micro;
-    private Plot plt ;
-
-
-
-    public List<Event> getEvent_queue() {
-        return event_queue;
-    }
-
+    private Double ServiceTime;
 
     public QueueingSimulation(List<Double>lambda, Double micro){
         this.lambda = lambda;
         this.micro = micro;
         this.event_queue = new ArrayList<Event>();
         this.packet_queue = new ArrayList<Packet>();
-        this.plt = Plot.create();
         this.Nlist = new ArrayList<>();
         this.Tlist = new ArrayList<>();
+        this.ServiceTime = null;
     }
+
+    public QueueingSimulation(List<Double>lambda, Double micro,Double ServiceTime){
+        this.lambda = lambda;
+        this.micro = micro;
+        this.event_queue = new ArrayList<Event>();
+        this.packet_queue = new ArrayList<Packet>();
+        this.Nlist = new ArrayList<>();
+        this.Tlist = new ArrayList<>();
+        this.ServiceTime = ServiceTime;
+    }
+
     public void startTest(){
         for (Double lambda:this.lambda){
             simulate(lambda, micro);
@@ -45,6 +52,7 @@ public class QueueingSimulation {
     }
 
     public void simulate(double a, double b) {
+
         double   currTime=0.0;
         double   prevTime = 0.0;
         boolean  cpuBusy = false;
@@ -53,12 +61,12 @@ public class QueueingSimulation {
         int      numPacketsServed = 0;
         double   totalSystemTime = 0.0;
         Packet   currPacket = null;
-        double ENDTIME = 10000.0;
-        //產生下一個packet到達的時間
+        double ENDTIME = 10000.0;// 這裡ENDTIME設為10000
 
+        //產生下一個packet到達的時間
         this.event_queue.add(new Event(exptime(a),0));
 
-        while (Double.compare(currTime, ENDTIME)<0) { // 這裡ENDTIME設為10000
+        while (Double.compare(currTime, ENDTIME)<0) {
             try{
                 Event e =  this.event_queue.remove(0);//從event queue取出first event;
                 prevTime = currTime;
@@ -78,8 +86,9 @@ public class QueueingSimulation {
                         Collections.sort(this.event_queue, (o1, o2) -> (int) (o1.getEventTime()-o2.getEventTime()));
                     }
                     else{
+                        //將p 插入到packet queue的尾巴;
                         this.packet_queue.add(p);
-                    }  //將p 插入到packet queue的尾巴;
+                    }
                     //產生下個packet的到達時間
                     Event e3 = new Event(currTime + exptime (a),0);
                     //將e3 依照它的eventTime插入到event queue中適當位置;
@@ -96,17 +105,13 @@ public class QueueingSimulation {
                     if (this.packet_queue.size()<=0){
                         cpuBusy = false;
                     }
-                    else{ // CPU處理下一個packet
-
+                    else{
+                        // CPU處理下一個packet
                         currPacket =this.packet_queue.remove(0);
-                        if(currPacket==null){
-                            System.out.println("check");
-                        }
-                        Event e4 = new Event(currTime + currPacket.getSvcTime(),1);
                         //將e4 依照它的eventTime插入到event queue中適當位置;
+                        Event e4 = new Event(currTime + currPacket.getSvcTime(),1);
                         this.event_queue.add(e4);
                         Collections.sort(this.event_queue, (o1, o2) -> (int) (o1.getEventTime()-o2.getEventTime()));
-
                     }
                 }
             }catch (NullPointerException e){
@@ -115,45 +120,44 @@ public class QueueingSimulation {
                 e.fillInStackTrace();
             }
         }
-
-
-//        印出 N = timePacketProduct / ENDTIME;
-//        印出 T = totalSystemTime/ numPacketsServed;
         System.out.println("result");
-        System.out.println(timePacketProduct / ENDTIME);
-        System.out.println(totalSystemTime/ numPacketsServed);
+        System.out.println("N="+timePacketProduct / ENDTIME);
+        System.out.println("T="+totalSystemTime/ numPacketsServed);
         this.Nlist.add(timePacketProduct / ENDTIME);
         this.Tlist.add(totalSystemTime/ numPacketsServed);
 
     }
-    public void show(String plotTitle,double[] x,double[] y) throws IOException, PythonExecutionException {
+    public double exptime(double lambda) {
+        if(this.ServiceTime==null){
+            Random random = new Random();
+            double randomNumber = random.nextDouble();
+            return  -1.0 *  Math.log(randomNumber) / lambda;
+        }
+        else {
+            return this.ServiceTime;
+        }
+
+    }
+    public Double getServiceTime() {
+        return ServiceTime;
+    }
+
+    public Double getMicro() {
+        return micro;
+    }
+
+    public double[] getNlist() {
+        return ArrayUtils.toPrimitive(this.Nlist.stream().toArray(Double[]::new));
+    }
 
 
-        // create your PlotPanel (you can use it as a JPanel)
-        Plot2DPanel plot = new Plot2DPanel();
+    public double[] getTlist() {
+        return ArrayUtils.toPrimitive(this.Tlist.stream().toArray(Double[]::new));
+    }
 
-        // add a line plot to the PlotPanel
-        plot.addLinePlot(plotTitle, x, y);
+    public double[] getLambda() {
+        return ArrayUtils.toPrimitive(this.lambda.stream().toArray(Double[]::new));
+    }
 
-        // put the PlotPanel in a JFrame, as a JPanel
-        JFrame frame = new JFrame("a plot panel");
-        frame.setContentPane(plot);
-        frame.setVisible(true);
-    }
-    public static double exptime(double lambda) {
-        Random random = new Random();
-        double randomNumber = random.nextDouble();
-        return  -1.0 *  Math.log(randomNumber) / lambda;
-    }
-    public void showNplot() throws IOException, PythonExecutionException {
-        double[] x = ArrayUtils.toPrimitive(this.lambda.stream().toArray(Double[]::new));
-        double[] y =   ArrayUtils.toPrimitive(this.Nlist.stream().toArray(Double[]::new));
-        this.show("test",x,y);
-    }
-    public void showTplot() throws IOException, PythonExecutionException {
-        double[] x = ArrayUtils.toPrimitive(this.lambda.stream().toArray(Double[]::new));
-        double[] y =   ArrayUtils.toPrimitive(this.Tlist.stream().toArray(Double[]::new));
-        this.show("test",x,y);
-    }
 
 }

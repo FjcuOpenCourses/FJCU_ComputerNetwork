@@ -1,14 +1,10 @@
-import com.github.sh0nk.matplotlib4j.Plot;
-import com.github.sh0nk.matplotlib4j.PythonExecutionException;
 import org.apache.commons.lang3.ArrayUtils;
-import org.math.plot.Plot2DPanel;
 
-import javax.swing.*;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+import java.util.stream.Collectors;
 
 public class QueueingSimulation {
 
@@ -22,12 +18,18 @@ public class QueueingSimulation {
     private   List<Double> lambda;
     private   Double micro;
     private Double ServiceTime;
+    private List<Double> usageRaito;
+
+    public double[] getUsageRaito() {
+        return ArrayUtils.toPrimitive(this.usageRaito.stream().toArray(Double[]::new));
+    }
 
     public QueueingSimulation(List<Double>lambda, Double micro){
         this.lambda = lambda;
         this.micro = micro;
         this.event_queue = new ArrayList<Event>();
         this.packet_queue = new ArrayList<Packet>();
+        this.usageRaito = this.lambda.stream().map(index->index/this.micro).collect(Collectors.toList());
         this.Nlist = new ArrayList<>();
         this.Tlist = new ArrayList<>();
         this.ServiceTime = null;
@@ -36,6 +38,7 @@ public class QueueingSimulation {
     public QueueingSimulation(List<Double>lambda, Double micro,Double ServiceTime){
         this.lambda = lambda;
         this.micro = micro;
+        this.usageRaito = this.lambda.stream().map(index->index/this.micro).collect(Collectors.toList());
         this.event_queue = new ArrayList<Event>();
         this.packet_queue = new ArrayList<Packet>();
         this.Nlist = new ArrayList<>();
@@ -120,7 +123,6 @@ public class QueueingSimulation {
                 e.fillInStackTrace();
             }
         }
-        System.out.println("result");
         System.out.println("N="+timePacketProduct / ENDTIME);
         System.out.println("T="+totalSystemTime/ numPacketsServed);
         this.Nlist.add(timePacketProduct / ENDTIME);
@@ -153,10 +155,6 @@ public class QueueingSimulation {
 
     public double[] getTlist() {
         return ArrayUtils.toPrimitive(this.Tlist.stream().toArray(Double[]::new));
-    }
-
-    public double[] getLambda() {
-        return ArrayUtils.toPrimitive(this.lambda.stream().toArray(Double[]::new));
     }
 
 

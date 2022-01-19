@@ -34,7 +34,7 @@ public class Main {
 
         for (QueueingSimulation currentTest:testData){
             String label = currentTest.getServiceTime()==null?"mu="+currentTest.getMicro().toString():"service time="+currentTest.getServiceTime().toString();
-            plot.addLinePlot(label,currentTest.getLambda(), title.equals("T")?currentTest.getTlist():currentTest.getNlist());
+            plot.addLinePlot(label,currentTest.getUsageRaito(), title.equals("T")?currentTest.getTlist():currentTest.getNlist());
             plot.addLegend("SOUTH");
 
         }
